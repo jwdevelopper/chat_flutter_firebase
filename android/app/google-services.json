@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "433241129893",
+    "firebase_url": "https://chat-curso-a92b9-default-rtdb.firebaseio.com",
+    "project_id": "chat-curso-a92b9",
+    "storage_bucket": "chat-curso-a92b9.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:433241129893:android:74ecec824bafad26455e4c",
+        "android_client_info": {
+          "package_name": "com.example.chat_firebase"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "433241129893-ci5hg59o549gd835qjo825gkii9hf23l.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.chat_firebase",
+            "certificate_hash": "c2490e3a6f459972d76b0309ffbdefbec7e59016"
+          }
+        },
+        {
+          "client_id": "433241129893-dt712rbtm30euaaigtqu77pu7pkjh154.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBm2rr2RJTkcmGSSiwg4UURm--SYvn5O-o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "433241129893-dt712rbtm30euaaigtqu77pu7pkjh154.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
