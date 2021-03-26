@@ -6,7 +6,7 @@ import 'package:image_picker/image_picker.dart';
 class TextComposer extends StatefulWidget {
   TextComposer(this.sendMessage);
 
-  final Function({String texto, File imgFile}) sendMessage;
+  final Function(String? texto, File? imgFile) sendMessage;
 
   @override
   _TextComposerState createState() => _TextComposerState();
@@ -14,6 +14,9 @@ class TextComposer extends StatefulWidget {
 
 class _TextComposerState extends State<TextComposer> {
   bool _digitandoTexto = false;
+
+  File? _imagem;
+  final picker = ImagePicker();
   final TextEditingController _controller = TextEditingController();
 
   void _reset() {
@@ -21,6 +24,18 @@ class _TextComposerState extends State<TextComposer> {
     setState(() {
       _digitandoTexto = false;
     });
+  }
+
+  Future getImagem() async {
+    print('CHamou o metodo');
+    final imagemEscolhida = await picker.getImage(source: ImageSource.camera);
+    setState(() {
+      if (imagemEscolhida != null) {
+        _imagem = File(imagemEscolhida.path);
+        widget.sendMessage(null,_imagem);
+      }
+    });
+    /*http://127.0.0.1:63373/D:/Cursos/flutter/chat_firebase/lib/components/text_composer.dart?authToken=PtBwLCXQ5zI%3D */
   }
 
   @override
@@ -31,11 +46,8 @@ class _TextComposerState extends State<TextComposer> {
         children: [
           IconButton(
             icon: Icon(Icons.photo_camera),
-            onPressed: () async {
-              final File imgFile = await ImagePicker.pickImage(source: ImageSource.camera);
-              if(imgFile == null) return;
-              widget.sendMessage(imgFile:imgFile);
-            },
+            onPressed: getImagem,
+            tooltip: 'Selecione a Imagem',
           ),
           Expanded(
             child: TextField(
@@ -48,7 +60,7 @@ class _TextComposerState extends State<TextComposer> {
                 });
               },
               onSubmitted: (texto) {
-                widget.sendMessage(texto:texto);
+                widget.sendMessage(texto,null);
                 _reset();
               },
             ),
@@ -57,7 +69,7 @@ class _TextComposerState extends State<TextComposer> {
             icon: Icon(Icons.send),
             onPressed: _digitandoTexto
                 ? () {
-                    widget.sendMessage(texto:_controller.text);
+                    widget.sendMessage(_controller.text,null);
                     _reset();
                   }
                 : null,
