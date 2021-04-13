@@ -1,10 +1,13 @@
 import 'dart:io';
 
 import 'package:chat_firebase/components/text_composer.dart';
+import 'package:chat_firebase/view/mensagens_chat.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class ChatScreen extends StatefulWidget {
   @override
@@ -12,73 +15,140 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
+  final GoogleSignIn googleSignIn = new GoogleSignIn();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  User? _currentUser;
+  bool _isLoading = false;
 
-  /*@override
-    void initState() {
-      super.initState();
-      Firebase.initializeApp();
-    }*/
+  @override
+  _initState() {
+    super.initState();
+    FirebaseAuth.instance.authStateChanges().listen((user) {
+      setState(() {
+        _currentUser = user;
+      });
+    });
+  }
+
+  Future<User?> _getUser() async {
+    if (_currentUser != null) {
+      return _currentUser;
+    }
+    try {
+      final GoogleSignInAccount? googleSignInAccount =
+          await googleSignIn.signIn();
+      final GoogleSignInAuthentication? googleSignInAuthentication =
+          await googleSignInAccount?.authentication;
+      final AuthCredential credential = GoogleAuthProvider.credential(
+          idToken: googleSignInAuthentication?.idToken,
+          accessToken: googleSignInAuthentication?.accessToken);
+      final UserCredential authenticatorResponse =
+          await FirebaseAuth.instance.signInWithCredential(credential);
+      final User? user = authenticatorResponse.user;
+      setState(() {
+        _currentUser = user;
+      });
+      return user;
+    } catch (error) {
+      return null;
+    }
+  }
 
   void _enviarMensagem(String? texto, File? imgFile) async {
-    await Firebase.initializeApp();
+    final User? user = await _getUser();
 
-    Map<String, dynamic> data = {};
+    if (user == null) {
+      _scaffoldKey.currentState?.showSnackBar(SnackBar(
+        content: Text('Não foi possivel fazer login. Tente novamente'),
+        backgroundColor: Colors.red,
+      ));
+    }
 
-    if(imgFile != null) {
-      String nomeArq = DateTime.now().millisecondsSinceEpoch.toString();
+    Map<String, dynamic> data = {
+      "uid": user?.uid,
+      "senderName": user?.displayName,
+      "senderPhotoUrl": user?.photoURL,
+      "time": Timestamp.now(),
+    };
+
+    if (imgFile != null) {
+      String nomeArq = user!.uid + DateTime.now().millisecondsSinceEpoch.toString();
       FirebaseStorage storage = FirebaseStorage.instance;
-      await storage.ref().child(
-        nomeArq
-      ).putFile(imgFile);
-      print('Antes da url de download');
+      await storage.ref().child(nomeArq).putFile(imgFile);
+      setState(() {
+              _isLoading = true;
+            });
       String url = await storage.ref(nomeArq).getDownloadURL();
       //print("TESTE | " + teste);
-      print("URL para download ver se printa no console: " + url);
       data['imgUrl'] = url;
+      setState(() {
+              _isLoading = false;
+            });
     }
-    if(texto != null){
+    if (texto != null) {
       data['texto'] = texto;
     }
-    CollectionReference msg = FirebaseFirestore.instance.collection('mensagens');
+    CollectionReference msg =
+        FirebaseFirestore.instance.collection('mensagens');
     msg.add(data);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       appBar: AppBar(
-        title: Text('olá'),
+        title: Text(_currentUser != null
+            ? 'Olá, ${_currentUser?.displayName}'
+            : 'Chat App'),
         elevation: 0,
+        centerTitle: true,
+        actions: [
+          _currentUser != null
+              ? IconButton(
+                  icon: Icon(Icons.exit_to_app),
+                  onPressed: () {
+                    FirebaseAuth.instance.signOut();
+                    googleSignIn.signOut();
+                    _scaffoldKey.currentState?.showSnackBar(SnackBar(
+                      content: Text('Você saiu com sucesso!'),
+                    ));
+                  },
+                )
+              : Container()
+        ],
       ),
       body: Column(
         children: [
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              
-              stream: FirebaseFirestore.instance.collection('mensagens').snapshots(),
-              builder: (context, snapshot){
-                switch(snapshot.connectionState){
+              stream: FirebaseFirestore.instance
+                  .collection('mensagens').orderBy('time')
+                  .snapshots(),
+              builder: (context, snapshot) {
+                switch (snapshot.connectionState) {
                   case ConnectionState.none:
                   case ConnectionState.waiting:
                     return Center(
                       child: CircularProgressIndicator(),
                     );
                   default:
-                    List<QueryDocumentSnapshot> documentos = snapshot.data!.docs;
+                    List<QueryDocumentSnapshot> documentos =
+                        snapshot.data!.docs.reversed.toList();
                     return ListView.builder(
-                      itemCount: documentos.length,
-                      reverse: false,
-                      itemBuilder: (context, index){
-                        return ListTile(
-                          title: Text(documentos[index].get('texto')),
-                        );
-                      }
-                      );
+                        itemCount: documentos.length,
+                        reverse: true,
+                        itemBuilder: (context, index) {
+                          return MensagensChat(documentos[index].data()!,
+                          documentos[index]['uid'] == _currentUser?.uid
+                          );
+                        });
                 }
               },
             ),
-            ),
+          ),
+          _isLoading ? LinearProgressIndicator() : Container(),
           TextComposer(_enviarMensagem),
         ],
       ),
